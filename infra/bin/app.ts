@@ -1,5 +1,6 @@
 import * as cdk from 'aws-cdk-lib';
 import { PortfolioStack } from '../lib/stack';
+import 'dotenv/config';
 
 const need = (k: string) => { const v = process.env[k]; if (!v) throw new Error(`Set ${k} before deploying`); return v; };
 new PortfolioStack(new cdk.App(), 'PortfolioStack', {
