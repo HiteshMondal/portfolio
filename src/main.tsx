@@ -4,81 +4,45 @@ import { P, ROLES, SUMMARY, SKILLS, JOB, PROJ, ACH, EDU, CERTS, LANGS, HOBBIES }
 import RES from "./resumes.gen.json";
 
 type Res = { label: string; filename: string; pdf: string; pages: string[] };
-const NAV = ["about", "skills", "experience", "projects", "achievements", "education", "resume", "contact"];
+const DOTS: [string, string][] = [["top", "Intro"], ["story", "Story"], ["now", "Now"], ["work", "Projects"], ["wins", "Numbers"], ["path", "Path"], ["cv", "Resume"], ["hello", "Contact"]];
 const go = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
 const st = (i: number) => ({ "--i": i } as CSSProperties);
 const reduced = () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-function tilt(e: RME<HTMLElement>, max = 5) {
+function tilt(e: RME<HTMLElement>, max = 4) {
   const el = e.currentTarget, r = el.getBoundingClientRect();
   const px = (e.clientX - r.left) / r.width, py = (e.clientY - r.top) / r.height;
   el.style.setProperty("--mx", px * r.width + "px"); el.style.setProperty("--my", py * r.height + "px");
   el.style.setProperty("--ry", (px - 0.5) * max * 2 + "deg"); el.style.setProperty("--rx", (0.5 - py) * max * 2 + "deg");
 }
 const untilt = (e: RME<HTMLElement>) => { e.currentTarget.style.setProperty("--rx", "0deg"); e.currentTarget.style.setProperty("--ry", "0deg"); };
+const burst = (x: number, y: number, n = 14) => {
+  if (document.querySelectorAll(".sp").length > 120) return;
+  for (let i = 0; i < n; i++) {
+    const s = document.createElement("i"), a = Math.random() * 6.28, d = 40 + Math.random() * 90;
+    s.className = "sp" + (i % 2 ? " b" : "");
+    s.style.cssText = `--x:${x}px;--y:${y}px;--dx:${Math.cos(a) * d}px;--dy:${Math.sin(a) * d}px`;
+    s.addEventListener("animationend", () => s.remove());
+    document.body.appendChild(s);
+  }
+};
 
-function Net() {
-  const ref = useRef<HTMLCanvasElement>(null);
-  useEffect(() => {
-    const c = ref.current!, x = c.getContext("2d")!;
-    let w = 0, h = 0, raf = 0, col = "#ffd23f";
-    const m = { x: -999, y: -999 };
-    let pts: { x: number; y: number; vx: number; vy: number }[] = [];
-    const still = reduced();
-    const size = () => {
-      const d = devicePixelRatio || 1; w = innerWidth; h = innerHeight;
-      c.width = w * d; c.height = h * d; x.setTransform(d, 0, 0, d, 0, 0);
-      pts = Array.from({ length: Math.min(80, Math.floor((w * h) / 20000)) }, () => ({ x: Math.random() * w, y: Math.random() * h, vx: (Math.random() - 0.5) * 0.4, vy: (Math.random() - 0.5) * 0.4 }));
-    };
-    const tint = () => { col = getComputedStyle(document.documentElement).getPropertyValue("--acc").trim() || col; };
-    const draw = () => {
-      x.clearRect(0, 0, w, h); x.fillStyle = col; x.strokeStyle = col;
-      for (const p of pts) {
-        if (!still) { p.x += p.vx; p.y += p.vy; if (p.x < 0 || p.x > w) p.vx *= -1; if (p.y < 0 || p.y > h) p.vy *= -1; }
-        x.globalAlpha = 0.7; x.beginPath(); x.arc(p.x, p.y, 1.6, 0, 6.3); x.fill();
-      }
-      for (let i = 0; i < pts.length; i++) {
-        for (let j = i + 1; j < pts.length; j++) {
-          const d = Math.hypot(pts[i].x - pts[j].x, pts[i].y - pts[j].y);
-          if (d < 130) { x.globalAlpha = (1 - d / 130) * 0.35; x.beginPath(); x.moveTo(pts[i].x, pts[i].y); x.lineTo(pts[j].x, pts[j].y); x.stroke(); }
-        }
-        const dm = Math.hypot(pts[i].x - m.x, pts[i].y - m.y);
-        if (dm < 180) { x.globalAlpha = (1 - dm / 180) * 0.7; x.beginPath(); x.moveTo(pts[i].x, pts[i].y); x.lineTo(m.x, m.y); x.stroke(); }
-      }
-      if (!still) raf = requestAnimationFrame(draw);
-    };
-    const mv = (e: MouseEvent) => { m.x = e.clientX; m.y = e.clientY; };
-    size(); tint(); draw();
-    const ti = setInterval(tint, 1000);
-    addEventListener("resize", size); addEventListener("mousemove", mv);
-    return () => { cancelAnimationFrame(raf); clearInterval(ti); removeEventListener("resize", size); removeEventListener("mousemove", mv); };
-  }, []);
-  return <canvas ref={ref} className="net" aria-hidden="true" />;
-}
+const Rv = ({ children, i = 0, cls = "" }: { children: ReactNode; i?: number; cls?: string }) => <div className={"rv " + cls} style={st(i)}>{children}</div>;
+const Card = ({ children, cls = "" }: { children: ReactNode; cls?: string }) => <div className={"card " + cls} onMouseMove={(e) => tilt(e)} onMouseLeave={untilt}>{children}</div>;
+const Chips = ({ items }: { items: string[] }) => <>{items.map((x) => <span className="chip" key={x}>{x}</span>)}</>;
+const Pts = ({ items }: { items: string[] }) => <ul className="pts">{items.map((x) => <li key={x}>{x}</li>)}</ul>;
+const Word = ({ t, o }: { t: string; o: number }) => <span className="word" aria-hidden="true">{[...t].map((c, i) => <span className="ch" key={i} style={st(i + o)}>{c}</span>)}</span>;
+const Band = ({ items, s, rev }: { items: string[]; s: number; rev?: boolean }) => (
+  <div className="band" aria-hidden="true"><div className={"track" + (rev ? " rev" : "")} style={{ "--s": s + "s" } as CSSProperties}>{[...items, ...items].map((x, i) => <span className="pill" key={i}>{x}</span>)}</div></div>
+);
 
-const LINES: [string, string?][] = [
-  ["whoami", "c"], ["hitesh-mondal · cloud & devops engineer in the making"], ["kubectl get pods -n hitesh", "c"],
-  ["NAME            READY   STATUS"], ["aws-devops      1/1     Running", "ok"], ["terraform-iac   1/1     Running", "ok"],
-  ["gitops-argocd   1/1     Running", "ok"], ["linux-admin     1/1     Running", "ok"], ["observability   1/1     Running", "ok"],
-  ["open-to-work --relocate", "c"],
-];
-function Term() {
-  const [n, setN] = useState(reduced() ? LINES.length : 0);
-  useEffect(() => {
-    const t = setInterval(() => setN((v) => (v < LINES.length ? v + 1 : v)), 520);
-    return () => clearInterval(t);
-  }, []);
-  return (
-    <div className="term tl" onMouseMove={(e) => tilt(e, 7)} onMouseLeave={untilt} role="img" aria-label="Terminal listing running pods: AWS, Terraform, GitOps, Linux and observability">
-      <div className="bar"><i /><i /><i /><span>hitesh@cluster:~</span></div>
-      <pre>
-        {LINES.slice(0, n).map(([t, k], i) => (
-          <div key={i}>{k === "c" && <span className="pr">$ </span>}{k === "ok" ? <>{t.slice(0, -7)}<span className="ok">Running</span></> : t}</div>
-        ))}
-        <span className="cur" />
-      </pre>
+function Orbit({ a, b }: { a: string[]; b: string[] }) {
+  const ring = (items: string[], r: number, cls: string) => (
+    <div className={"ring " + cls} style={{ "--r": r } as CSSProperties}>
+      {items.map((x, k) => <div className="it" key={x} style={{ "--t": (360 / items.length) * k + "deg" } as CSSProperties}><span>{x}</span></div>)}
     </div>
   );
+  return <div className="scene" aria-hidden="true"><div className="rig"><div className="orb" />{ring(a, 235, "r1")}{ring(b, 140, "r2 rev")}</div></div>;
 }
 
 function Count({ to, suffix }: { to: number; suffix: string }) {
@@ -97,18 +61,6 @@ function Count({ to, suffix }: { to: number; suffix: string }) {
   return <span ref={ref}>{v}{suffix}</span>;
 }
 
-const Rv = ({ children, i = 0, cls = "" }: { children: ReactNode; i?: number; cls?: string }) => <div className={"rv " + cls} style={st(i)}>{children}</div>;
-const Card = ({ children, cls = "" }: { children: ReactNode; cls?: string }) => <div className={"card tl " + cls} onMouseMove={(e) => tilt(e, 3)} onMouseLeave={untilt}>{children}</div>;
-const Chips = ({ items }: { items: string[] }) => <>{items.map((x, k) => <span className="chip" key={x} style={{ "--k": k } as CSSProperties}>{x}</span>)}</>;
-const Pts = ({ items }: { items: string[] }) => <ul className="pts">{items.map((x) => <li key={x}>{x}</li>)}</ul>;
-const Sec = ({ id, title, children }: { id: string; title: string; children: ReactNode }) => (
-  <section id={id} className="sec"><h2 className="rv hd">{title}</h2><div>{children}</div></section>
-);
-const Word = ({ t, o }: { t: string; o: number }) => <span className="word" aria-hidden="true">{[...t].map((c, i) => <span className="ch" key={i} style={st(i + o)}>{c}</span>)}</span>;
-function Marquee({ items, rev }: { items: string[]; rev?: boolean }) {
-  return <div className="mq" aria-hidden="true"><div className={"mt" + (rev ? " rev" : "")}>{[...items, ...items].map((x, i) => <span key={i}>{x}</span>)}</div></div>;
-}
-
 function Viewer() {
   const list = RES as Res[];
   const [i, setI] = useState(0), [z, setZ] = useState(100), [msg, setMsg] = useState("");
@@ -116,12 +68,13 @@ function Viewer() {
   if (!r) return <p className="muted">No resume has been added yet.</p>;
   const dl = async () => {
     try {
-      const c = (window as unknown as { claude?: { use: (n: string) => Promise<{ save: (o: { filename: string; data: Blob }) => Promise<unknown> } | null> } }).claude;
-      const d = c ? await c.use("downloads") : null;
-      if (!d) { setMsg("Downloads aren’t available in this view. Open the published link in a browser to save the PDF."); return; }
       const bin = atob(r.pdf), u = new Uint8Array(bin.length);
       for (let k = 0; k < bin.length; k++) u[k] = bin.charCodeAt(k);
-      await d.save({ filename: r.filename, data: new Blob([u], { type: "application/pdf" }) });
+      const blob = new Blob([u], { type: "application/pdf" });
+      const c = (window as unknown as { claude?: { use: (n: string) => Promise<{ save: (o: { filename: string; data: Blob }) => Promise<unknown> } | null> } }).claude;
+      const d = c ? await c.use("downloads") : null;
+      if (d) await d.save({ filename: r.filename, data: blob });
+      else { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = r.filename; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); }
       setMsg("Saved " + r.filename);
     } catch (e) { setMsg((e as { code?: string }).code === "declined" ? "" : "Couldn’t save the PDF. Please try again."); }
   };
@@ -134,7 +87,7 @@ function Viewer() {
         <button className="btn p" onClick={dl}>Download PDF</button>
       </div>
       <div className="pview" tabIndex={0} aria-label={r.label + " PDF, scrollable"}>
-        {r.pages.map((src, k) => <img key={i + "-" + k} className="pg" src={src} style={{ ...st(k), width: z + "%" }} alt={`${r.label}, page ${k + 1} of ${r.pages.length}`} />)}
+        {r.pages.map((src, k) => <img key={i + "-" + k} className="pg" src={src} style={{ width: z + "%" }} alt={`${r.label}, page ${k + 1} of ${r.pages.length}`} />)}
       </div>
       <p className="note" role="status">{msg || `PDF · ${r.pages.length} pages`}</p>
     </div>
@@ -177,102 +130,140 @@ function Contact() {
 }
 
 function App() {
-  const [r, setR] = useState(0), [act, setAct] = useState("");
+  const [r, setR] = useState(0), [act, setAct] = useState("top");
   const glow = useRef<HTMLDivElement>(null), prog = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const t = setInterval(() => setR((v) => (v + 1) % ROLES.length), 2400);
+    const still = reduced(), root = document.documentElement;
+    const hero = document.querySelector<HTMLElement>(".hero"), aur = document.querySelector<HTMLElement>(".aur"), say = document.querySelector(".say");
+    const words = [...document.querySelectorAll(".say span")];
+    const rot = setInterval(() => setR((v) => (v + 1) % ROLES.length), 2400);
     const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } }), { threshold: 0.12 });
     document.querySelectorAll(".rv").forEach((el) => io.observe(el));
     const so = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) setAct(e.target.id); }), { rootMargin: "-45% 0px -50% 0px" });
-    NAV.forEach((id) => { const el = document.getElementById(id); if (el) so.observe(el); });
-    const mm = (e: MouseEvent) => { if (glow.current) glow.current.style.transform = `translate(${e.clientX}px,${e.clientY}px)`; };
-    const sc = () => { const mx = document.documentElement.scrollHeight - innerHeight; if (prog.current) prog.current.style.transform = `scaleX(${mx > 0 ? scrollY / mx : 0})`; };
-    addEventListener("mousemove", mm); addEventListener("scroll", sc, { passive: true }); sc();
-    return () => { clearInterval(t); io.disconnect(); so.disconnect(); removeEventListener("mousemove", mm); removeEventListener("scroll", sc); };
+    DOTS.forEach(([id]) => { const el = document.getElementById(id); if (el) so.observe(el); });
+    let tick = false, last: HTMLElement | null = null, pal = 0;
+    const frame = () => {
+      tick = false;
+      const mx = root.scrollHeight - innerHeight;
+      if (prog.current) prog.current.style.transform = `scaleX(${mx > 0 ? scrollY / mx : 0})`;
+      aur?.style.setProperty("--sy", String(scrollY));
+      if (say) {
+        const b = say.getBoundingClientRect(), p = Math.min(1, Math.max(0, (innerHeight * 0.85 - b.top) / (b.height + innerHeight * 0.3)));
+        words.forEach((w, i) => w.classList.toggle("on", still || i < p * words.length * 1.08));
+      }
+    };
+    const sc = () => { if (!tick) { tick = true; requestAnimationFrame(frame); } };
+    const move = (e: PointerEvent) => {
+      if (glow.current) glow.current.style.transform = `translate(${e.clientX}px,${e.clientY}px)`;
+      hero?.style.setProperty("--px", String((e.clientX / innerWidth) * 2 - 1)); hero?.style.setProperty("--py", String((e.clientY / innerHeight) * 2 - 1));
+      if (e.pointerType !== "mouse") return;
+      const b = ((e.target as Element).closest?.(".btn,.nb") as HTMLElement | null) ?? null;
+      if (last && last !== b) last.style.translate = "";
+      if (b) { const k = b.getBoundingClientRect(); b.style.translate = `${(e.clientX - k.left - k.width / 2) * 0.25}px ${(e.clientY - k.top - k.height / 2) * 0.35}px`; }
+      last = b;
+    };
+    const down = (e: PointerEvent) => { if (!still && !(e.target as Element).closest?.("input,textarea")) burst(e.clientX, e.clientY); };
+    const click = (e: MouseEvent) => {
+      if (!(e.target as Element).closest?.("[data-vibe]")) return;
+      pal = (pal + 1) % 5;
+      if (pal) root.dataset.pal = String(pal); else delete root.dataset.pal;
+      if (!still) burst(e.clientX, e.clientY, 30);
+    };
+    addEventListener("scroll", sc, { passive: true }); addEventListener("pointermove", move, { passive: true });
+    addEventListener("pointerdown", down, { passive: true }); addEventListener("click", click); frame();
+    return () => { clearInterval(rot); io.disconnect(); so.disconnect(); removeEventListener("scroll", sc); removeEventListener("pointermove", move); removeEventListener("pointerdown", down); removeEventListener("click", click); };
   }, []);
   const theme = () => {
     const el = document.documentElement;
     const light = el.dataset.theme ? el.dataset.theme === "light" : matchMedia("(prefers-color-scheme: light)").matches;
     el.dataset.theme = light ? "dark" : "light";
   };
+  const all = SKILLS.flatMap(([, v]) => v), n = Math.ceil(all.length / 3);
   const tools = SKILLS[2][1];
+  const path: [string, string, string?][] = [...EDU.map(([a, b, c]) => [c, a, b] as [string, string, string]), ...CERTS.map(([a, b]) => [b, a] as [string, string])];
   return (
     <>
       <div className="aur" aria-hidden="true"><i /><i /><i /></div>
-      <Net />
       <div className="glow" ref={glow} aria-hidden="true" />
       <div className="prog" ref={prog} aria-hidden="true" />
       <header className="nav">
-        <b className="logo">hitesh.dev</b>
-        <nav aria-label="Sections">{NAV.map((s) => <button key={s} className={"lk" + (act === s ? " on" : "")} onClick={() => go(s)}>{s}</button>)}</nav>
-        <button className="lk" onClick={theme} aria-label="Toggle light and dark theme">theme</button>
+        <b className="logo gt">hitesh.dev</b>
+        <button className="nb h" onClick={() => go("cv")}>Resume</button>
+        <button className="nb" data-vibe aria-label="Change accent colors">✦ Vibe</button>
+        <button className="nb" onClick={theme} aria-label="Toggle light and dark theme">Theme</button>
+        <button className="nb p" onClick={() => go("hello")}>Say hi</button>
       </header>
-      <main className="w">
-        <section className="hero">
+      <nav className="dots" aria-label="Page sections">{DOTS.map(([id, t]) => <button key={id} className={act === id ? "on" : ""} data-t={t} aria-label={t} onClick={() => go(id)} />)}</nav>
+      <main>
+        <section id="top" className="w hero">
           <div>
-            <p className="kick">Aspiring IT engineer · Hyderabad · open to relocate</p>
+            <p className="kick">Open to relocate · {P.loc.split(",")[1]?.trim() ?? "Hyderabad"}</p>
             <h1 aria-label="Hitesh Mondal"><Word t="Hitesh" o={0} /><br /><Word t="Mondal" o={6} /></h1>
-            <p className="lead">I want to build, automate and run reliable systems. Right now that means <span className="swap" key={r}>{ROLES[r]}</span>.</p>
+            <p className="lead">I build, automate and run reliable systems. Right now that means <span className="swap" key={r}>{ROLES[r]}</span>.</p>
             <div className="cta">
-              <button className="btn p" onClick={() => go("projects")}>See my projects</button>
-              <button className="btn" onClick={() => go("resume")}>View resume</button>
-              <button className="btn" onClick={() => go("contact")}>Contact me</button>
+              <button className="btn p" onClick={() => go("work")}>See what I’ve built</button>
+              <button className="btn" onClick={() => go("hello")}>Let’s talk</button>
             </div>
           </div>
-          <Term />
+          <Orbit a={tools.slice(0, 12)} b={[...SKILLS[0][1].slice(0, 3), ...tools.slice(12, 17)]} />
         </section>
-        <Marquee items={tools.slice(0, 10)} />
-        <Marquee items={[...tools.slice(10), ...SKILLS[0][1]]} rev />
 
-        <Sec id="about" title="About">
-          {SUMMARY.map((s, k) => <Rv i={k} key={s}><p className="body">{s}</p></Rv>)}
-          <Rv i={3}><p className="muted"><b>Languages:</b> {LANGS}. <b>Outside work:</b> {HOBBIES}.</p></Rv>
-        </Sec>
+        <section id="story" className="w">
+          <p className="say">{SUMMARY[0].split(" ").map((w, i) => <span key={i}>{w} </span>)}</p>
+          <div className="cols"><Rv><p className="muted">{SUMMARY[1]}</p></Rv><Rv i={1}><p className="muted">{SUMMARY[2]}</p></Rv></div>
+          <Rv><p className="muted">I speak {LANGS}. Off the clock: {HOBBIES}.</p></Rv>
+        </section>
 
-        <Sec id="skills" title="Skills">
-          {SKILLS.map(([k, v], n) => (
-            <Rv i={n} key={k}><Card cls="sk"><h3>{k}</h3><div><Chips items={v} /></div></Card></Rv>
-          ))}
-        </Sec>
+        <div className="bands" aria-hidden="true">
+          <Band items={all.slice(0, n)} s={42} /><Band items={all.slice(n, 2 * n)} s={50} rev /><Band items={all.slice(2 * n)} s={38} />
+        </div>
+        <ul className="sr">{all.map((x) => <li key={x}>{x}</li>)}</ul>
 
-        <Sec id="experience" title="Experience">
-          <Rv><Card>
-            <div className="head"><h3>{JOB.role}</h3><span className="muted">{JOB.when}</span></div>
-            <p className="muted">{JOB.org}, {JOB.place}</p>
-            <Pts items={JOB.pts} />
-          </Card></Rv>
-        </Sec>
+        <section id="now" className="w now">
+          <Rv>
+            <p className="live"><i />Right now</p>
+            <h2><span className="gt">{JOB.role}</span> at {JOB.org}</h2>
+            <p className="muted">{JOB.place} · {JOB.when}</p>
+          </Rv>
+          <Rv i={1}><Card><Pts items={JOB.pts} /></Card></Rv>
+        </section>
 
-        <Sec id="projects" title="Projects">
+        <section id="work" className="w">
           {PROJ.map((p) => (
             <Rv key={p.name}><Card cls="proj">
-              <div className="head"><h3>{p.name}</h3><span className="muted">{p.when}</span></div>
+              <span className="muted">{p.when}</span>
+              <h3>{p.name}</h3>
               <div className="mini">{p.stats.map(([a, b]) => <div key={b}><strong>{a}</strong><span>{b}</span></div>)}</div>
               <Pts items={p.pts} />
               <div><Chips items={p.stack} /></div>
-              <a className="btn" href={"https://" + p.repo} target="_blank" rel="noopener noreferrer">View on GitHub</a>
+              <a className="btn" href={"https://" + p.repo} target="_blank" rel="noopener noreferrer">View on GitHub →</a>
             </Card></Rv>
           ))}
-        </Sec>
+        </section>
 
-        <Sec id="achievements" title="Achievements">
-          <div className="stats">
+        <section id="wins" className="w">
+          <div className="bento">
             {ACH.map((a, k) => (
-              <Rv i={k} key={a.t}><Card>
+              <Rv i={k % 4} key={a.t}><Card>
                 <strong className="big">{a.n === null ? a.s : <Count to={a.n} suffix={a.s} />}</strong>
                 <p>{a.t}</p><p className="muted">{a.src}</p>
               </Card></Rv>
             ))}
           </div>
-        </Sec>
+        </section>
 
-        <Sec id="education" title="Education and certifications">
-          {EDU.map(([a, b, c], k) => <Rv i={k} key={a}><div className="row"><span>{c}</span><div><b>{a}</b><p className="muted">{b}</p></div></div></Rv>)}
-          {CERTS.map(([a, b], k) => <Rv i={k} key={a}><div className="row"><span>{b}</span><div>{a}</div></div></Rv>)}
-        </Sec>
+        <section id="path" className="w">
+          <div className="rv tl2">
+            {path.map(([w, t, s]) => <div className="ev" key={t}><span className="muted">{w}</span><b>{t}</b>{s && <p className="muted">{s}</p>}</div>)}
+          </div>
+        </section>
 
-        <Sec id="resume" title="Resume"><Rv><Viewer /></Rv></Sec>
-        <Sec id="contact" title="Contact"><Contact /></Sec>
+        <section id="cv" className="w"><Rv><Viewer /></Rv></section>
+
+        <section id="hello" className="w">
+          <Rv><h2 className="mega gt">Let’s build something reliable.</h2></Rv>
+          <Contact />
+        </section>
       </main>
       <footer className="foot">© 2026 Hitesh Mondal · Built with React and TypeScript</footer>
     </>
