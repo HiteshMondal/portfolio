@@ -1,0 +1,26 @@
+{
+  "name": "hitesh-portfolio",
+  "version": "1.0.0",
+  "description": "Hitesh Mondal - technical portfolio (React + TypeScript, single-file build)",
+  "scripts": {
+    "data": "node gen.mjs",
+    "resume": "python3 make_pdf.py",
+    "build": "npm run data && node build.mjs",
+    "typecheck": "tsc -p .",
+    "preview": "python3 -m http.server 8080 -d dist"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.7",
+    "esbuild": "^0.28.2",
+    "typescript": "^7.0.2"
+  },
+  "private": true
+}
