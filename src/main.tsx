@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties, type FormEvent, type MouseEvent as RME, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type MouseEvent as RME, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { P, ROLES, SUMMARY, SKILLS, JOB, PROJ, ACH, EDU, CERTS, LANGS, HOBBIES } from "./data";
 import RES from "./resumes.gen.json";
@@ -8,6 +8,8 @@ const DOTS: [string, string][] = [["top", "Intro"], ["story", "Story"], ["now", 
 const go = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
 const st = (i: number) => ({ "--i": i } as CSSProperties);
 const reduced = () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+const KEY = /^(Cloud|Computing|DevOps|Platform|Engineering|Linux|Administration|DSA|OOP|DBMS|Computer|Networks|System|Design)\b/;
 
 function tilt(e: RME<HTMLElement>, max = 4) {
   const el = e.currentTarget, r = el.getBoundingClientRect();
@@ -35,6 +37,20 @@ const Word = ({ t, o }: { t: string; o: number }) => <span className="word" aria
 const Band = ({ items, s, rev }: { items: string[]; s: number; rev?: boolean }) => (
   <div className="band" aria-hidden="true"><div className={"track" + (rev ? " rev" : "")} style={{ "--s": s + "s" } as CSSProperties}>{[...items, ...items].map((x, i) => <span className="pill" key={i}>{x}</span>)}</div></div>
 );
+
+const IC: Record<string, [boolean, ReactNode]> = {
+  mail: [false, <><rect x="3" y="5" width="18" height="14" rx="2" /><polyline points="3 7 12 13 21 7" /></>],
+  phone: [false, <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />],
+  gh: [true, <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" />],
+  li: [true, <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />],
+  lc: [false, <><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /><line x1="14" y1="4" x2="10" y2="20" /></>],
+};
+const Icon = ({ k }: { k: string }) => {
+  const [filled, node] = IC[k];
+  return filled
+    ? <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">{node}</svg>
+    : <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{node}</svg>;
+};
 
 function Orbit({ a, b }: { a: string[]; b: string[] }) {
   const ring = (items: string[], r: number, cls: string) => (
@@ -94,37 +110,46 @@ function Viewer() {
   );
 }
 
+type Ln = { k: string; t: string; v: string; href: string; ext?: boolean };
+
 function Contact() {
   const [msg, setMsg] = useState("");
-  const send = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const f = new FormData(e.currentTarget), name = String(f.get("name")), from = String(f.get("email")), body = String(f.get("msg"));
-    const url = `mailto:${P.email}?subject=${encodeURIComponent("Hello from " + name)}&body=${encodeURIComponent(body + "\n\n" + name + " (" + from + ")")}`;
-    setMsg("Opening your email app. If nothing opens, copy my address and write to me directly.");
-    window.location.href = url;
-  };
   const copy = async () => {
     try { await navigator.clipboard.writeText(P.email); setMsg("Email address copied."); }
     catch { setMsg("Couldn’t copy automatically. My address is " + P.email); }
   };
+  const links: Ln[] = [
+    { k: "mail", t: "Email", v: P.email, href: "mailto:" + P.email },
+    { k: "phone", t: "Phone", v: P.phone, href: "tel:" + P.tel },
+    { k: "gh", t: "GitHub", v: "@" + (P.gh.split("/").pop() ?? ""), href: P.gh, ext: true },
+    { k: "li", t: "LinkedIn", v: P.li.split("/").pop() ?? "", href: P.li, ext: true },
+    { k: "lc", t: "LeetCode", v: "@" + (P.lc.split("/").pop() ?? ""), href: P.lc, ext: true },
+  ];
   return (
     <div className="contact">
-      <Rv><form onSubmit={send} className="card">
-        <label>Your name<input name="name" required autoComplete="name" /></label>
-        <label>Your email<input name="email" type="email" required autoComplete="email" /></label>
-        <label>Message<textarea name="msg" rows={5} required /></label>
-        <button className="btn p" type="submit">Send message</button>
-        <p className="note" role="status">{msg}</p>
-      </form></Rv>
-      <Rv i={1}><div className="links">
-        <a className="btn" href={"mailto:" + P.email}>{P.email}</a>
-        <button className="btn" onClick={copy}>Copy email address</button>
-        <a className="btn" href={"tel:" + P.tel}>{P.phone}</a>
-        <a className="btn" href={P.li} target="_blank" rel="noopener noreferrer">LinkedIn</a>
-        <a className="btn" href={P.gh} target="_blank" rel="noopener noreferrer">GitHub</a>
-        <a className="btn" href={P.lc} target="_blank" rel="noopener noreferrer">LeetCode</a>
-        <p className="muted">Based in {P.loc}. Permanent address: {P.perm}. Open to relocate.</p>
-      </div></Rv>
+      <Rv>
+        <div className="cbox">
+          <p className="lead2">Open to cloud, DevOps and Linux roles, and happy to relocate. Pick whichever way suits you best.</p>
+          <div className="row">
+            <a className="btn p" href={"mailto:" + P.email}>Email me</a>
+            <button className="btn" onClick={copy}>Copy email address</button>
+          </div>
+          <p className="note" role="status">{msg}</p>
+          <div className="tiles">
+            {links.map((l, k) => (
+              <div className="rv" style={st(k)} key={l.k}>
+                <a className="tile" href={l.href} {...(l.ext ? { target: "_blank", rel: "noopener noreferrer" } : {})} onMouseMove={(e) => tilt(e, 0)}>
+                  <span className="ic"><Icon k={l.k} /></span>
+                  <small>{l.t}</small>
+                  <b>{l.v}</b>
+                  <span className="ar" aria-hidden="true">↗</span>
+                </a>
+              </div>
+            ))}
+          </div>
+          <p className="muted loc">Based in {P.loc}. Permanent address: {P.perm}. Open to relocate.</p>
+        </div>
+      </Rv>
     </div>
   );
 }
@@ -209,9 +234,27 @@ function App() {
         </section>
 
         <section id="story" className="w">
-          <p className="say">{SUMMARY[0].split(" ").map((w, i) => <span key={i}>{w} </span>)}</p>
-          <div className="cols"><Rv><p className="muted">{SUMMARY[1]}</p></Rv><Rv i={1}><p className="muted">{SUMMARY[2]}</p></Rv></div>
-          <Rv><p className="muted">I speak {LANGS}. Off the clock: {HOBBIES}.</p></Rv>
+          <Rv><p className="eyebrow">About me</p></Rv>
+          <p className="say">{SUMMARY[0].split(" ").map((w, i) => <span key={i} className={KEY.test(w) ? "k" : undefined}>{w} </span>)}</p>
+          <div className="sgrid">
+            <Rv><Card cls="sc">
+              <span className="no">01</span>
+              <h4>How I learn</h4>
+              <p>{SUMMARY[1]}</p>
+            </Card></Rv>
+            <Rv i={1}><Card cls="sc">
+              <span className="no">02</span>
+              <h4>What I’m looking for</h4>
+              <p>{SUMMARY[2]}</p>
+            </Card></Rv>
+            <Rv i={2}><Card cls="sc facts">
+              <span className="no">03</span>
+              <h4>At a glance</h4>
+              <div className="fg"><h5>Focus</h5><Chips items={ROLES} /></div>
+              <div className="fg"><h5>Languages</h5><Chips items={LANGS.split(", ")} /></div>
+              <div className="fg"><h5>Off the clock</h5><Chips items={HOBBIES.split(", ").map(cap)} /></div>
+            </Card></Rv>
+          </div>
         </section>
 
         <div className="bands" aria-hidden="true">
